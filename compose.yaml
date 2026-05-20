@@ -62,7 +62,7 @@ services:
         condition: service_healthy
 
   cowrie:
-    image: cowrie/cowrie:latest
+    image: cowrie/cowrie@sha256:4252154d4bd86b1ff77a10a893bbb0390c0708f0cd0dff2eda6d9d141391d64d
     container_name: honeypot-cowrie
     ports:
       - "127.0.0.1:2222:2222"
