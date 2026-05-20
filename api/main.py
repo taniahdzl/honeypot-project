@@ -29,6 +29,7 @@ class EventIn(BaseModel):
     password: Optional[str] = None
     command: Optional[str] = None
     raw_json: Optional[dict] = None
+    source_hash: Optional[str] = None
 
 
 def verify_shipper_token(authorization: Optional[str]) -> None:
@@ -106,12 +107,13 @@ def create_event(event: EventIn, authorization: Optional[str] = Header(default=N
         conn.execute(
             text("""
                 INSERT INTO cowrie_events (
-                    event_time, src_ip, event_type, username, password, command, raw_json
+                    event_time, src_ip, event_type, username, password, command, raw_json, source_hash
                 )
                 VALUES (
                     :event_time, :src_ip, :event_type, :username, :password, :command,
-                    CAST(:raw_json AS JSONB)
+                    CAST(:raw_json AS JSONB), :source_hash
                 )
+                ON CONFLICT (source_hash) WHERE source_hash IS NOT NULL DO NOTHING
             """),
             {
                 "event_time": event.event_time,
@@ -121,6 +123,7 @@ def create_event(event: EventIn, authorization: Optional[str] = Header(default=N
                 "password": event.password,
                 "command": event.command,
                 "raw_json": raw_json_literal,
+                "source_hash": event.source_hash,
             },
         )
     return {"message": "evento insertado"}
@@ -129,7 +132,17 @@ def create_event(event: EventIn, authorization: Optional[str] = Header(default=N
 @app.get("/stats")
 def stats():
     with engine.connect() as conn:
-        total = conn.execute(text("SELECT COUNT(*) FROM cowrie_events")).scalar()
+        totals_row = conn.execute(
+            text("""
+                SELECT
+                    COUNT(*) AS total,
+                    COUNT(*) FILTER (
+                        WHERE event_time IS NOT NULL
+                          AND event_time >= NOW() - INTERVAL '24 hours'
+                    ) AS recent_24h
+                FROM cowrie_events
+            """)
+        ).mappings().first()
         tops_ip = conn.execute(
             text("""
                 SELECT src_ip, COUNT(*) AS count
@@ -151,18 +164,10 @@ def stats():
                 LIMIT 15
             """)
         ).mappings().all()
-        recent = conn.execute(
-            text("""
-                SELECT COUNT(*)
-                FROM cowrie_events
-                WHERE event_time IS NOT NULL
-                  AND event_time >= NOW() - INTERVAL '24 hours'
-            """)
-        ).scalar()
 
     return {
-        "total_events": int(total or 0),
-        "recent_24h": int(recent or 0),
+        "total_events": int(totals_row["total"] or 0),
+        "recent_24h": int(totals_row["recent_24h"] or 0),
         "top_ips": [dict(r) for r in tops_ip],
         "top_event_types": [dict(r) for r in tops_type],
     }
