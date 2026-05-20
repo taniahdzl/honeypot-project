@@ -1,9 +1,10 @@
 import json
 import os
+import secrets
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import create_engine, text
 
@@ -12,6 +13,7 @@ DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "honeypass")
 DB_NAME = os.getenv("POSTGRES_DB", "honeypot")
 DB_HOST = os.getenv("POSTGRES_HOST", "db")
 DB_PORT = os.getenv("POSTGRES_PORT", "5432")
+SHIPPER_TOKEN = os.getenv("SHIPPER_TOKEN", "demo-secret-token")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 engine = create_engine(DATABASE_URL)
@@ -29,6 +31,26 @@ class EventIn(BaseModel):
     raw_json: Optional[dict] = None
 
 
+def verify_shipper_token(authorization: Optional[str]) -> None:
+    if authorization is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header requerido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Formato de Authorization inválido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not secrets.compare_digest(token, SHIPPER_TOKEN):
+        raise HTTPException(status_code=403, detail="Token inválido")
+
+
 @app.get("/")
 def root():
     return {"message": "API funcionando"}
@@ -38,11 +60,11 @@ def root():
 def health():
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok"}
+    return {"status": "ok", "api": "ok", "database": "ok"}
 
 
 @app.get("/events")
-def get_events(limit: int = 50):
+def get_events(limit: int = Query(50, ge=1, le=500)):
     with engine.connect() as conn:
         rows = conn.execute(
             text("""
@@ -73,7 +95,9 @@ def get_event_by_id(event_id: int):
 
 
 @app.post("/events")
-def create_event(event: EventIn):
+def create_event(event: EventIn, authorization: Optional[str] = Header(default=None)):
+    verify_shipper_token(authorization)
+
     raw_json_literal = None
     if event.raw_json is not None:
         raw_json_literal = json.dumps(event.raw_json, default=str)

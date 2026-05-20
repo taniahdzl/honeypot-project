@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 API_URL = os.environ.get("API_URL", "http://api:8000").rstrip("/")
+SHIPPER_TOKEN = os.environ.get("SHIPPER_TOKEN", "demo-secret-token")
 COWRIE_JSON_LOG = os.environ.get(
     "COWRIE_JSON_LOG",
     "/cowrie/cowrie-git/var/log/cowrie/cowrie.json",
@@ -81,7 +82,10 @@ def post_json(path: str, body: dict[str, Any], timeout: int = 15) -> None:
     req = urllib.request.Request(
         f"{API_URL}{path}",
         data=encoded,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {SHIPPER_TOKEN}",
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout):  # noqa: S310
