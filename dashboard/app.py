@@ -48,7 +48,7 @@ def fetch_events(limit: int = 500) -> pd.DataFrame:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
     if "event_time" in df:
-        df["event_time"] = pd.to_datetime(df["event_time"], errors="coerce")
+        df["event_time"] = pd.to_datetime(df["event_time"], utc=True, errors="coerce")
     return df
 
 
@@ -93,8 +93,8 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
         )
         if isinstance(selected_range, tuple) and len(selected_range) == 2:
             start_date, end_date = selected_range
-            start_ts = pd.Timestamp(start_date)
-            end_ts = pd.Timestamp(end_date) + pd.Timedelta(days=1)
+            start_ts = pd.Timestamp(start_date, tz="UTC")
+            end_ts = pd.Timestamp(end_date, tz="UTC") + pd.Timedelta(days=1)
             filtered = filtered[
                 (filtered["event_time"] >= start_ts)
                 & (filtered["event_time"] < end_ts)
