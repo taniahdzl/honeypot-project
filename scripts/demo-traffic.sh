@@ -1,7 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:${API_PORT:-8000}}"
+SHIPPER_TOKEN="${SHIPPER_TOKEN:-demo-secret-token}"
 DEMO_TRAFFIC_DURATION="${DEMO_TRAFFIC_DURATION:-600}"
 DEMO_TRAFFIC_INTERVAL="${DEMO_TRAFFIC_INTERVAL:-4}"
 
@@ -93,6 +101,7 @@ post_event() {
 
   for attempt in 1 2 3; do
     if curl -fsS -X POST "${API_BASE_URL}/events" \
+      -H "Authorization: Bearer ${SHIPPER_TOKEN}" \
       -H "Content-Type: application/json" \
       -d "${payload}" >/dev/null; then
       return 0

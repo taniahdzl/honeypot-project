@@ -85,8 +85,10 @@ honeypot-project/
 │   │   ├── ADR-004-streamlit-dashboard.md
 │   │   └── ADR-005-shipper-ingesta-docker.md
 │   ├── demo-checklist.md     # Lista de verificación ante el jurado
+│   ├── dashboard.md          # Filtros, visualizaciones y manejo de contraseñas en Streamlit
 │   ├── openapi.json          # OpenAPI mantenido alineado con `api/main.py` (véase tabla `/docs`)
-│   └── quantas.md            # Documento de architecture quantas
+│   ├── quantas.md            # Documento de architecture quantas
+│   └── security-notes.md     # Token API ↔ shipper y pruebas curl de POST /events
 ├── .github/
 │   └── workflows/
 │       └── ci.yml            # Pipeline de CI/CD con GitHub Actions
@@ -137,6 +139,9 @@ POSTGRES_PORT=5432
 
 API_PORT=8000
 DASHBOARD_PORT=8501
+
+# Token compartido por API y shipper para proteger POST /events
+SHIPPER_TOKEN=demo-secret-token
 ```
 
 ### 3. Levantar todos los servicios
@@ -158,6 +163,7 @@ Esto levanta **cinco servicios**: Cowrie, shipper de logs, FastAPI, PostgreSQL y
 Si ya usaste el proyecto antes y la base está vacía o sin muestras: `docker compose down -v` y vuelve a levantar (borra datos locales).
 
 Lista paso a paso para ensayar el día del jurado: [`docs/demo-checklist.md`](docs/demo-checklist.md).
+Guía de filtros y visualizaciones: [`docs/dashboard.md`](docs/dashboard.md).
 
 ### 4. Humo rápido de la API (opcional)
 
@@ -175,7 +181,7 @@ Para una demo dinámica y repetible de ~10 minutos:
 make demo-traffic
 ```
 
-Este script inserta telemetría controlada por la API local para que Streamlit muestre cambios constantes sin depender de intentos manuales o de herramientas externas. Puedes ajustar duración e intervalo así:
+Este script inserta telemetría controlada por la API local usando `SHIPPER_TOKEN`, para que Streamlit muestre cambios constantes sin depender de intentos manuales o de herramientas externas. Puedes ajustar duración e intervalo así:
 
 ```bash
 DEMO_TRAFFIC_DURATION=300 DEMO_TRAFFIC_INTERVAL=3 make demo-traffic
@@ -224,9 +230,9 @@ Si no conecta: Postgres no levantado, puerto distinto ocupado en el host o firew
 |---|---|---|
 | `GET` | `/` | Mensaje de estado de la API |
 | `GET` | `/health` | Healthcheck del sistema |
-| `GET` | `/events` | Lista eventos (query `limit`, por defecto 50). Respuesta: `{"events":[...]}` |
+| `GET` | `/events` | Lista eventos (query `limit`, por defecto 50, mínimo 1, máximo 500). Respuesta: `{"events":[...]}` |
 | `GET` | `/events/{id}` | Detalle por `id` (incluye `raw_json` si existe). Respuesta: `{"event":{...}}` o HTTP 404 |
-| `POST` | `/events` | Ingresar un nuevo evento (usado por el shipper) |
+| `POST` | `/events` | Ingresar un nuevo evento (requiere `Authorization: Bearer <SHIPPER_TOKEN>`) |
 | `GET` | `/stats` | `total_events`, `recent_24h`, `top_ips`, `top_event_types` |
 
 > La especificación en [`docs/openapi.json`](docs/openapi.json) se mantiene **alineada a mano** con `api/main.py` (fuente canónica: código + `/docs` en tiempo de ejecución). Actualiza OpenAPI cuando cambien rutas o formas de respuesta.
@@ -236,6 +242,17 @@ Ejemplo rápido de detalle:
 ```bash
 curl -s http://localhost:8000/events/1
 ```
+
+Ejemplo de inserción protegida:
+
+```bash
+curl -i -X POST http://localhost:8000/events \
+  -H "Authorization: Bearer ${SHIPPER_TOKEN:-demo-secret-token}" \
+  -H "Content-Type: application/json" \
+  -d '{"src_ip":"203.0.113.44","event_type":"cowrie.login.failed","username":"root","password":"password"}'
+```
+
+Más detalles: [`docs/security-notes.md`](docs/security-notes.md).
 
 ---
 
@@ -283,7 +300,7 @@ ssh root@localhost -p 2222
 # Prueba contraseñas débiles: 123456, password, admin, root
 ```
 
-Cowrie registrará la sesión, el shipper (`shipper/` en Docker) enviará el evento a FastAPI, y en unos segundos aparecerá reflejado en el dashboard de Streamlit en `http://localhost:8501` (consulta datos vía API con caché breve).
+Cowrie registrará la sesión, el shipper (`shipper/` en Docker) enviará el evento a FastAPI con Bearer token, y en unos segundos aparecerá reflejado en el dashboard de Streamlit en `http://localhost:8501` (consulta datos vía API con caché breve).
 
 ---
 
@@ -299,7 +316,7 @@ Cowrie registrará la sesión, el shipper (`shipper/` en Docker) enviará el eve
 
 ## Backlog opcional (no bloqueante de la demo)
 
-- **Seguridad / producción**: el `POST /events` está pensado para la red Compose académica; una evolución mínima sería **Bearer token** sólo conocido por el shipper, **rate limiting** y política explícita de **retención** de datos. Las contraseñas capturadas son datos sensibles: no uses este despliegue en Internet abierto sin análisis de riesgos.
+- **Seguridad / producción**: `POST /events` exige un Bearer token compartido entre API y shipper. Para producción haría falta gestión real de secretos, rotación de token, rate limiting y política explícita de retención. Las contraseñas capturadas son datos sensibles: no uses este despliegue en Internet abierto sin análisis de riesgos.
 - **Análisis avanzado**: enriquecer con GeoIP por IP, etiquetado de familias de comandos y paneles tipo serie temporal; tratado como segunda iteración separada del flujo datos básicos.
 
 ---
