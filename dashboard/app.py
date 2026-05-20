@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Any
 
 import httpx
@@ -6,10 +7,20 @@ import pandas as pd
 import streamlit as st
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8000").rstrip("/")
+DASHBOARD_REFRESH_SECONDS = int(os.getenv("DASHBOARD_REFRESH_SECONDS", "5"))
 
 st.title("Dashboard Honeypot")
+auto_refresh = st.sidebar.checkbox("Auto-refresh", value=True)
+st.sidebar.caption(f"Actualiza cada {DASHBOARD_REFRESH_SECONDS} s")
 
 REQUEST_TIMEOUT = 30.0
+
+
+def rerun_dashboard() -> None:
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
 
 
 @st.cache_data(ttl=5)
@@ -49,7 +60,7 @@ st.subheader("Eventos recientes")
 if df.empty:
     st.info("Todavía no hay eventos. Conéctate al honeypot: ssh root@localhost -p 2222")
 else:
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     top_ips_payload = stats.get("top_ips") or []
     if top_ips_payload:
@@ -63,3 +74,7 @@ else:
         st.bar_chart(ett.set_index("event_type")["count"])
     elif "event_type" in df:
         st.bar_chart(df["event_type"].fillna("unknown").value_counts().head(10))
+
+if auto_refresh:
+    time.sleep(DASHBOARD_REFRESH_SECONDS)
+    rerun_dashboard()

@@ -151,8 +151,9 @@ Esto levanta **cinco servicios**: Cowrie, shipper de logs, FastAPI, PostgreSQL y
 
 1. `docker compose up -d`
 2. Abre Streamlit (`http://localhost:8501`) — verás métricas y filas **de muestra** si el volumen de Postgres es nuevo.
-3. En otra terminal: `ssh root@localhost -p 2222` (contraseña falsa bastan). En unos segundos nuevos eventos aparecen por el shipper → API → mismo dashboard tras refresco automático (~5 s).
-4. Opcional — API: `curl -s http://localhost:8000/stats | python -m json.tool`
+3. En otra terminal: `make demo-traffic`. Durante unos 10 minutos se generan eventos controlados cada ~4 s para que el dashboard cambie en vivo.
+4. Opcional: `ssh root@localhost -p 2222` (contraseña falsa bastan). En unos segundos nuevos eventos reales de Cowrie aparecen por el shipper → API → mismo dashboard tras refresco automático (~5 s).
+5. Opcional — API: `curl -s http://localhost:8000/stats | python -m json.tool`
 
 Si ya usaste el proyecto antes y la base está vacía o sin muestras: `docker compose down -v` y vuelve a levantar (borra datos locales).
 
@@ -167,6 +168,18 @@ make demo-smoke
 ```
 
 Equivale a `GET /health`, `GET /events?limit=1` y `GET /stats`. El mensaje final del script recuerda que **`cowrie.json` puede aparecer sólo después del primer intento SSH** al honeypot.
+
+Para una demo dinámica y repetible de ~10 minutos:
+
+```bash
+make demo-traffic
+```
+
+Este script inserta telemetría controlada por la API local para que Streamlit muestre cambios constantes sin depender de intentos manuales o de herramientas externas. Puedes ajustar duración e intervalo así:
+
+```bash
+DEMO_TRAFFIC_DURATION=300 DEMO_TRAFFIC_INTERVAL=3 make demo-traffic
+```
 
 ### 5. Verificar que todo esté corriendo
 

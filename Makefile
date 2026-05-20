@@ -1,4 +1,4 @@
-.PHONY: up down clean demo-smoke logs ps help
+.PHONY: up down clean demo-smoke demo-traffic logs ps help
 
 ## Levanta todos los servicios en background
 up:
@@ -16,6 +16,11 @@ clean:
 demo-smoke:
 	@chmod +x scripts/demo-smoke.sh
 	API_BASE_URL=http://127.0.0.1:$${API_PORT:-8000} ./scripts/demo-smoke.sh
+
+## Genera eventos demo constantes durante ~10 minutos
+demo-traffic:
+	@chmod +x scripts/demo-traffic.sh
+	API_BASE_URL=http://127.0.0.1:$${API_PORT:-8000} ./scripts/demo-traffic.sh
 
 ## Muestra el estado de los contenedores
 ps:
@@ -49,6 +54,7 @@ help:
 	@echo "  make down          — Detiene los servicios"
 	@echo "  make clean         — Detiene y elimina volúmenes (reinicia BD)"
 	@echo "  make demo-smoke    — Humo HTTP contra /health, /events, /stats"
+	@echo "  make demo-traffic  — Genera eventos visibles en dashboard (~10 min)"
 	@echo "  make ps            — Estado de los contenedores"
 	@echo "  make logs          — Logs de todos los servicios"
 	@echo "  make logs-api      — Logs solo de FastAPI"
