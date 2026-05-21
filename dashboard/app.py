@@ -60,7 +60,7 @@ st.subheader("Eventos recientes")
 if df.empty:
     st.info("Todavía no hay eventos. Conéctate al honeypot: ssh root@localhost -p 2222")
 else:
-    st.dataframe(df, width="stretch")
+    st.dataframe(df, use_container_width=True)
 
     top_ips_payload = stats.get("top_ips") or []
     if top_ips_payload:
