@@ -5,6 +5,7 @@ Pensado para demo con Docker Compose: comparte volumen cowrie_var con Cowrie.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 API_URL = os.environ.get("API_URL", "http://api:8000").rstrip("/")
+SHIPPER_TOKEN = os.environ.get("SHIPPER_TOKEN", "demo-secret-token")
 COWRIE_JSON_LOG = os.environ.get(
     "COWRIE_JSON_LOG",
     "/cowrie/cowrie-git/var/log/cowrie/cowrie.json",
@@ -64,6 +66,8 @@ def extract_src_ip(data: dict[str, Any]) -> str | None:
 
 
 def cowrie_line_to_payload(data: dict[str, Any]) -> dict[str, Any]:
+    raw_str = json.dumps(data, sort_keys=True, default=str)
+    source_hash = hashlib.sha256(raw_str.encode()).hexdigest()
     payload: dict[str, Any] = {
         "event_time": parse_event_time(data.get("timestamp")),
         "src_ip": extract_src_ip(data),
@@ -72,6 +76,7 @@ def cowrie_line_to_payload(data: dict[str, Any]) -> dict[str, Any]:
         "password": data.get("password"),
         "command": data.get("input"),
         "raw_json": data,
+        "source_hash": source_hash,
     }
     return payload
 
@@ -81,7 +86,10 @@ def post_json(path: str, body: dict[str, Any], timeout: int = 15) -> None:
     req = urllib.request.Request(
         f"{API_URL}{path}",
         data=encoded,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {SHIPPER_TOKEN}",
+            "Content-Type": "application/json",
+        },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=timeout):  # noqa: S310

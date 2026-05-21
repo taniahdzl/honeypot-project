@@ -7,6 +7,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: America/Mexico_City
+      PGTZ: America/Mexico_City
     ports:
       - "127.0.0.1:${POSTGRES_PORT}:5432"
     volumes:
@@ -29,6 +31,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_HOST: db
       POSTGRES_PORT: "5432"
+      SHIPPER_TOKEN: ${SHIPPER_TOKEN:-demo-secret-token}
+      TZ: America/Mexico_City
     ports:
       - "127.0.0.1:${API_PORT}:8000"
     depends_on:
@@ -50,6 +54,7 @@ services:
     container_name: honeypot-dashboard
     environment:
       API_BASE_URL: http://api:8000
+      TZ: America/Mexico_City
     ports:
       - "127.0.0.1:${DASHBOARD_PORT}:8501"
     depends_on:
@@ -57,7 +62,7 @@ services:
         condition: service_healthy
 
   cowrie:
-    image: cowrie/cowrie:latest
+    image: cowrie/cowrie@sha256:4252154d4bd86b1ff77a10a893bbb0390c0708f0cd0dff2eda6d9d141391d64d
     container_name: honeypot-cowrie
     ports:
       - "127.0.0.1:2222:2222"
@@ -75,6 +80,7 @@ services:
       COWRIE_JSON_LOG: /cowrie/cowrie-git/var/log/cowrie/cowrie.json
       SHIPPER_STATE_DIR: /data
       SHIPPER_BATCH_SLEEP: "0.1"
+      SHIPPER_TOKEN: ${SHIPPER_TOKEN:-demo-secret-token}
     volumes:
       - cowrie_var:/cowrie/cowrie-git/var:ro
       - shipper_state:/data

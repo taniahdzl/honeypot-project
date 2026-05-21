@@ -1,3 +1,6 @@
+import hashlib
+import json
+
 from shipper.shipper import cowrie_line_to_payload, parse_event_time
 
 
@@ -23,6 +26,10 @@ def test_cowrie_line_to_payload_maps_expected_fields():
 
     payload = cowrie_line_to_payload(data)
 
+    expected_hash = hashlib.sha256(
+        json.dumps(data, sort_keys=True, default=str).encode()
+    ).hexdigest()
+
     assert payload == {
         "event_time": "2026-05-19T12:34:56+00:00",
         "src_ip": "203.0.113.44",
@@ -31,4 +38,5 @@ def test_cowrie_line_to_payload_maps_expected_fields():
         "password": "password",
         "command": "uname -a",
         "raw_json": data,
+        "source_hash": expected_hash,
     }

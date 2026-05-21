@@ -2,24 +2,19 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Honeypot API",
-    "version": "0.2.0"
+    "version": "0.1.0"
   },
   "paths": {
     "/": {
       "get": {
-        "summary": "Raíz",
-        "operationId": "root",
+        "summary": "Root",
+        "operationId": "root__get",
         "responses": {
           "200": {
-            "description": "OK",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" }
-                  }
-                }
+                "schema": {}
               }
             }
           }
@@ -28,19 +23,14 @@
     },
     "/health": {
       "get": {
-        "summary": "Salud DB + proceso",
-        "operationId": "health",
+        "summary": "Health",
+        "operationId": "health_health_get",
         "responses": {
           "200": {
-            "description": "Healthy",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": { "type": "string" }
-                  }
-                }
+                "schema": {}
               }
             }
           }
@@ -49,95 +39,143 @@
     },
     "/events": {
       "get": {
-        "summary": "Lista de eventos",
-        "operationId": "list_events",
+        "summary": "Get Events",
+        "operationId": "get_events_events_get",
         "parameters": [
           {
             "name": "limit",
             "in": "query",
             "required": false,
-            "schema": { "type": "integer", "default": 50, "minimum": 1 }
+            "schema": {
+              "type": "integer",
+              "maximum": 500,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Eventos ordenados descendente por id",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/EventListOut" }
+                "schema": {}
               }
             }
           },
-          "422": { "$ref": "#/components/responses/ValidationError" }
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
       },
       "post": {
-        "summary": "Ingesta (shipper u orígenes autorizados)",
-        "operationId": "create_event",
+        "summary": "Create Event",
+        "operationId": "create_event_events_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/EventIn" }
+              "schema": {
+                "$ref": "#/components/schemas/EventIn"
+              }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Insertado",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": { "type": "string" }
-                  }
-                }
+                "schema": {}
               }
             }
           },
-          "422": { "$ref": "#/components/responses/ValidationError" }
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/events/{event_id}": {
       "get": {
-        "summary": "Detalle por id",
-        "operationId": "get_event",
+        "summary": "Get Event By Id",
+        "operationId": "get_event_by_id_events__event_id__get",
         "parameters": [
           {
             "name": "event_id",
             "in": "path",
             "required": true,
-            "schema": { "type": "integer", "minimum": 1 }
+            "schema": {
+              "type": "integer",
+              "title": "Event Id"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Evento encontrado",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/EventDetailOut" }
+                "schema": {}
               }
             }
           },
-          "404": {
-            "description": "No encontrado"
-          },
-          "422": { "$ref": "#/components/responses/ValidationError" }
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/stats": {
       "get": {
-        "summary": "Resumen para dashboard",
-        "operationId": "stats",
+        "summary": "Stats",
+        "operationId": "stats_stats_get",
         "responses": {
           "200": {
-            "description": "Totales y tops",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/StatsOut" }
+                "schema": {}
               }
             }
           }
@@ -146,97 +184,98 @@
     }
   },
   "components": {
-    "responses": {
-      "ValidationError": {
-        "description": "Error de validación",
-        "content": {
-          "application/json": {
-            "schema": { "$ref": "#/components/schemas/HTTPValidationError" }
-          }
-        }
-      }
-    },
     "schemas": {
       "EventIn": {
         "properties": {
           "event_time": {
-            "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }]
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Time"
           },
-          "src_ip": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "event_type": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "username": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "password": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "command": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "raw_json": { "anyOf": [{ "type": "object", "additionalProperties": true }, { "type": "null" }] }
+          "src_ip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Src Ip"
+          },
+          "event_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Type"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          },
+          "command": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Command"
+          },
+          "raw_json": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Json"
+          }
         },
         "type": "object",
         "title": "EventIn"
       },
-      "EventRow": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "event_time": { "anyOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
-          "src_ip": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "event_type": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "username": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "password": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
-          "command": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
-        }
-      },
-      "EventListOut": {
-        "type": "object",
-        "properties": {
-          "events": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/EventRow" }
-          }
-        },
-        "required": ["events"]
-      },
-      "EventDetailOut": {
-        "type": "object",
-        "properties": {
-          "event": {
-            "type": "object",
-            "additionalProperties": true,
-            "description": "Incluye raw_json (JSON) cuando existe"
-          }
-        },
-        "required": ["event"]
-      },
-      "StatsOut": {
-        "type": "object",
-        "properties": {
-          "total_events": { "type": "integer" },
-          "recent_24h": { "type": "integer" },
-          "top_ips": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "src_ip": { "type": "string" },
-                "count": { "type": "integer" }
-              }
-            }
-          },
-          "top_event_types": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "event_type": { "type": "string" },
-                "count": { "type": "integer" }
-              }
-            }
-          }
-        },
-        "required": ["total_events", "recent_24h", "top_ips", "top_event_types"]
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
-            "items": { "$ref": "#/components/schemas/ValidationError" },
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
             "type": "array",
             "title": "Detail"
           }
@@ -248,16 +287,40 @@
         "properties": {
           "loc": {
             "items": {
-              "anyOf": [{ "type": "string" }, { "type": "integer" }]
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
             },
             "type": "array",
             "title": "Location"
           },
-          "msg": { "type": "string", "title": "Message" },
-          "type": { "type": "string", "title": "Error Type" }
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
         },
         "type": "object",
-        "required": ["loc", "msg", "type"],
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
         "title": "ValidationError"
       }
     }
